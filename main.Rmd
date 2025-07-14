@@ -1,0 +1,79 @@
+---
+title: "main"
+output: html_document
+---
+
+# Importing packages
+
+```{r}
+library(tidyverse)
+library(astsa)
+library(GGally)
+library(MASS)
+library(nnet)
+library(readr)
+```
+
+
+# Importing Dataset
+
+```{r}
+training_df <- read_csv("churn-bigml-80.csv")
+testing_df <- read_csv("churn-bigml-20.csv")
+```
+
+# Exploring Dataset:
+
+### Column Names and Meanings:
+
+```{r}
+print(colnames(training_df))
+print(head(training_df))
+summary(
+  training_df %>%
+          select_if(is.numeric)
+)
+len <- length(training_df %>%
+          select_if(is.numeric)
+)
+```
+
+#### Prelimanary Findings:
+
+The data here is quite complex. Every observation represents a different user account on the network (not sure Onnet or Offnet / Depending if company owns or leases). From first glance, the features/variables that stand out would be State, International Plan, Voicemail Plan, # Vmail Messages, Total Day Minutes, Total day calls, Total day charge, Total eve minutes, Total eve calls, Total eve charge, Total night minutes, Total night calls, Total night charge, Total intl minutes, Total intl calls, Total intl calls, Total intl charge, Customer service calls. So `r len` variables in total.
+
+### Feature Engineering/Review:
+
+#### Goal - Get there to be less (more meaningful) variables through feature engineering:
+
+```{r}
+df <- training_df %>%
+  group_by(State, `Area code`,`International plan`, `Voice mail plan`, `Account length`) %>%
+  summarize(
+    total_mins = `Total day minutes` + `Total eve minutes` + `Total night minutes` + `Total intl minutes`, 
+    total_calls = `Total day calls` + `Total eve calls` + `Total night calls` + `Total intl calls`,
+    total_charge = `Total day charge` + `Total eve charge` + `Total night charge` + `Total intl charge`,
+    Churn
+    )
+```
+
+#### Visualising
+
+```{r}
+visual_1 <- df %>%
+  ungroup() %>%
+  dplyr::select(State, total_mins, total_calls, total_charge) %>%
+  group_by(State) %>%
+  summarise(across(everything(), sum))
+
+par(mfrow=c(1,3))
+
+boxplot(total_mins~State,visual_1, main="Minutes Per State")
+boxplot(total_calls~State,visual_1, main="Calls Per State")
+boxplot(total_charge~State,visual_1, main="Charge Per State")
+```
+
+Data seems dispersed throughout US states for metrics such as: total minutes, calls, and charge. Possibly three communities per feature graph. 
+
+
+
